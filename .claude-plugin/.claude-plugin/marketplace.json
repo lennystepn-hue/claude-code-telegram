@@ -1,0 +1,20 @@
+{
+  "name": "lennystepn-hue",
+  "owner": {
+    "name": "lennystepn-hue",
+    "email": "lennystepn-hue@users.noreply.github.com"
+  },
+  "metadata": {
+    "description": "Full Claude Code CLI experience in Telegram — streaming, buttons, task tracking, session management",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "claude-code-telegram",
+      "source": "./",
+      "description": "Enhanced Telegram channel plugin with streaming output, inline buttons, task tracking, and session management",
+      "category": "channel",
+      "tags": ["telegram", "channel", "streaming", "buttons", "tasks", "sessions"]
+    }
+  ]
+}

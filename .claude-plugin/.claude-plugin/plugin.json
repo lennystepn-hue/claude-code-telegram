@@ -1,0 +1,6 @@
+{
+  "name": "claude-code-telegram",
+  "description": "Full Claude Code CLI experience in Telegram — streaming, buttons, task tracking, session management",
+  "version": "0.1.0",
+  "keywords": ["telegram", "channel", "mcp", "streaming", "buttons"]
+}

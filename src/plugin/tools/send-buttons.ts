@@ -1,20 +1,19 @@
 import type { Bot } from 'grammy';
 import { InlineKeyboard } from 'grammy';
-import type { CallbackRegistry } from '../bot/callbacks.js';
 import { assertAllowedChat } from '../access/gate.js';
 
 export const sendButtonsToolSchema = {
   name: 'send_buttons',
   description:
-    'Send an inline keyboard to the user and block until they click a button (or timeout). Returns the selected button id.',
+    'Send a message with numbered options to the user. Returns immediately — the user will reply with their choice as a normal message (e.g. "1" or the option text). Do NOT block or wait — just send the options and tell Claude to watch for the user\'s next message.',
   inputSchema: {
     type: 'object' as const,
     properties: {
       chat_id: { type: 'string', description: 'Telegram chat ID' },
-      text: { type: 'string', description: 'Message text shown above the buttons' },
+      text: { type: 'string', description: 'Message text / question' },
       buttons: {
         type: 'array',
-        description: 'Array of buttons to display',
+        description: 'Array of options to display',
         items: {
           type: 'object',
           properties: {
@@ -36,7 +35,7 @@ export const sendButtonsToolSchema = {
 
 export async function handleSendButtons(
   bot: Bot,
-  callbackRegistry: CallbackRegistry,
+  _callbackRegistry: unknown,
   args: {
     chat_id: string;
     text: string;
@@ -44,33 +43,23 @@ export async function handleSendButtons(
     layout?: number;
     reply_to?: number;
   }
-): Promise<{ selected: string; message_id: number }> {
+): Promise<{ text: string; message_id: number }> {
   const { chat_id, text, buttons, layout = 2, reply_to } = args;
   assertAllowedChat(chat_id);
 
+  // Build numbered options text
+  const optionsText = buttons
+    .map((btn, i) => `${i + 1}. ${btn.text}`)
+    .join('\n');
+
+  const fullText = `${text}\n\n${optionsText}\n\nReply with the number or option name.`;
+
+  // Also send inline keyboard for convenience (clicks won't be captured but look nice)
   const keyboard = new InlineKeyboard();
   let col = 0;
-
   for (const btn of buttons) {
-    // We need the message_id to encode the callback data, but we don't have it yet.
-    // We'll use a placeholder approach: encode data after sending.
-    // Instead, build raw inline_keyboard buttons manually using message_id placeholder.
-    // We'll build the keyboard after sending by encoding with a temp approach.
-    // Actually the standard approach: send first without real callback data (impossible),
-    // so we use a two-step: send with placeholder, then edit with real data.
-    //
-    // Simpler: encode with messageId=0 as placeholder, then after send, re-encode.
-    // But CallbackRegistry.encodeCallbackData requires the real messageId.
-    //
-    // Best approach: send with raw callback_data that we construct, then register.
-    // We'll use a unique token per button since we don't have msgId yet.
-    // Actually, let's just use the button id directly as callback data and parse it differently.
-    //
-    // Looking at CallbackRegistry: it uses format "btn:<msgId>:<buttonId>"
-    // So we MUST have the messageId first. Strategy: send message, get msgId, edit with real keyboard.
-
-    // We'll just add a placeholder — we'll rebuild after getting msg.
-    void btn; // suppress unused warning
+    // Use a simple callback data — won't be captured but that's OK
+    keyboard.text(btn.text, `opt:${btn.id}`);
     col++;
     if (col >= layout) {
       keyboard.row();
@@ -78,48 +67,17 @@ export async function handleSendButtons(
     }
   }
 
-  // Step 1: Send message without keyboard to get message_id
   const replyParams = reply_to
     ? { reply_parameters: { message_id: reply_to } }
     : {};
-  const msg = await bot.api.sendMessage(chat_id, text, replyParams);
-  const messageId = msg.message_id;
 
-  // Step 2: Build keyboard with real message_id encoded callback data
-  const realKeyboard = new InlineKeyboard();
-  let c = 0;
-  for (const btn of buttons) {
-    const callbackData = callbackRegistry.encodeCallbackData(messageId, btn.id);
-    realKeyboard.text(btn.text, callbackData);
-    c++;
-    if (c >= layout && c < buttons.length) {
-      realKeyboard.row();
-      c = 0;
-    }
-  }
-
-  // Step 3: Edit message to attach real keyboard
-  await bot.api.editMessageText(chat_id, messageId, text, {
-    reply_markup: realKeyboard,
+  const msg = await bot.api.sendMessage(chat_id, fullText, {
+    ...replyParams,
+    reply_markup: keyboard,
   });
 
-  // Step 4: Register and block until click or timeout
-  const selected = await callbackRegistry.register(chat_id, messageId, buttons);
-
-  // Step 5: Edit message to show selection result (remove buttons)
-  const selectedBtn = buttons.find((b) => b.id === selected);
-  const resultText =
-    selected === '__timeout__'
-      ? `${text}\n\n⏱ Timed out`
-      : selected === '__cancelled__'
-      ? `${text}\n\n❌ Cancelled`
-      : `${text}\n\n✅ Selected: ${selectedBtn?.text ?? selected}`;
-
-  try {
-    await bot.api.editMessageText(chat_id, messageId, resultText);
-  } catch {
-    // Ignore edit errors (message may have been deleted)
-  }
-
-  return { selected, message_id: messageId };
+  return {
+    text: `sent options (id: ${msg.message_id}). User will reply with their choice as a text message. Watch for the next inbound message.`,
+    message_id: msg.message_id,
+  };
 }
