@@ -6,7 +6,6 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { StreamManager } from './stream/manager.js';
 import { CallbackRegistry } from './bot/callbacks.js';
-import { createBot } from './bot/index.js';
 import { getToken } from './access/config.js';
 import { INSTRUCTIONS } from './instructions.js';
 
@@ -41,9 +40,6 @@ async function main() {
     {
       capabilities: {
         tools: {},
-        experimental: {
-          'claude/channel': {},
-        },
       },
       instructions: INSTRUCTIONS,
     }
@@ -51,7 +47,12 @@ async function main() {
 
   const streamManager = new StreamManager();
   const callbackRegistry = new CallbackRegistry();
-  const bot = createBot(token, mcp, callbackRegistry);
+
+  // We run as a companion MCP plugin alongside the official telegram channel.
+  // The official plugin handles polling/inbound. We only use the Bot for
+  // outbound API calls (sendMessage, editMessage, etc.) — NO polling.
+  const { Bot } = await import('grammy');
+  const bot = new Bot(token);
 
   // Register list tools handler
   mcp.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -147,50 +148,11 @@ async function main() {
     }
   });
 
-  // Start bot polling with 409 conflict retry loop
-  async function startPolling(): Promise<void> {
-    while (true) {
-      try {
-        await bot.start({
-          onStart: (info) => {
-            console.error(`[bot] Started as @${info.username}`);
-          },
-        });
-        break;
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        if (message.includes('409') || message.includes('Conflict')) {
-          console.error('[bot] 409 Conflict — another instance running, retrying in 5s...');
-          await new Promise((r) => setTimeout(r, 5000));
-        } else {
-          console.error('[bot] Fatal polling error:', message);
-          throw err;
-        }
-      }
-    }
-  }
-
   // Graceful shutdown
-  const shutdown = async () => {
-    console.error('[server] Shutting down...');
-    try {
-      await bot.stop();
-    } catch {
-      // ignore
-    }
-    process.exit(0);
-  };
+  process.on('SIGTERM', () => process.exit(0));
+  process.stdin.on('close', () => process.exit(0));
 
-  process.on('SIGTERM', shutdown);
-  process.stdin.on('close', shutdown);
-
-  // Start polling in background
-  startPolling().catch((err) => {
-    console.error('[bot] Polling failed:', err);
-    process.exit(1);
-  });
-
-  // Connect MCP transport
+  // Connect MCP transport (no bot polling — official plugin handles that)
   const transport = new StdioServerTransport();
   await mcp.connect(transport);
   console.error('[mcp] Connected via stdio');
