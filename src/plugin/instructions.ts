@@ -110,6 +110,75 @@ Send any local file to Telegram (photos via sendPhoto, others as document).
 send_file({ chat_id, file_path: "/path/to/file.png", caption: "Screenshot" })
 \`\`\`
 
+### send_mermaid
+Send a Mermaid diagram as a monospace code block. If the diagram is too long, it is sent as a .mmd file.
+
+\`\`\`
+send_mermaid({ chat_id, diagram: "graph TD\\n  A --> B", caption: "Flow diagram" })
+\`\`\`
+
+### send_chart
+Send a text-based horizontal bar chart using Unicode block characters (█░).
+
+\`\`\`
+send_chart({
+  chat_id,
+  title: "CPU Usage",
+  data: [
+    { label: "Node A", value: 80 },
+    { label: "Node B", value: 60 }
+  ],
+  chart_type: "horizontal_bar"
+})
+\`\`\`
+
+### send_code_image
+Send a code snippet as a formatted Telegram message with language syntax hint.
+Short snippets are sent inline; longer ones are sent as a document file with the right extension.
+
+\`\`\`
+send_code_image({ chat_id, code: "const x = 1;", language: "typescript", filename: "index.ts" })
+\`\`\`
+
+### send_screenshot
+Send a screenshot or image file to Telegram. Image extensions are sent as photos; others as documents.
+A 📸 prefix is automatically added to the caption.
+
+\`\`\`
+send_screenshot({ chat_id, file_path: "/tmp/screen.png", caption: "Current state" })
+\`\`\`
+
+### send_table
+Send a formatted monospace-aligned table to Telegram.
+If too wide or long, it is sent as a .txt document.
+
+\`\`\`
+send_table({
+  chat_id,
+  title: "Users",
+  headers: ["Name", "Role", "Status"],
+  rows: [
+    ["Alice", "Admin", "Active"],
+    ["Bob", "User", "Inactive"]
+  ]
+})
+\`\`\`
+
+### send_dep_graph
+Send a dependency graph as an ASCII tree to Telegram.
+If too long, it is sent as a .txt document.
+
+\`\`\`
+send_dep_graph({
+  chat_id,
+  root: "my-app",
+  dependencies: [
+    { name: "express@4.18.0", deps: ["body-parser@1.20.0", "cookie@0.5.0"] },
+    { name: "typescript@5.3.0", deps: [] }
+  ]
+})
+\`\`\`
+
 ## Security Rules
 
 1. **NEVER** call any tool with a chat_id that wasn't provided to you in the incoming message metadata. You can only respond to the chat that messaged you.

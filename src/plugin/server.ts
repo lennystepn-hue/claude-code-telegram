@@ -19,6 +19,12 @@ import { sendButtonsToolSchema, handleSendButtons } from './tools/send-buttons.j
 import { updateTasksToolSchema, handleUpdateTasks } from './tools/update-tasks.js';
 import { sendDiffToolSchema, handleSendDiff } from './tools/send-diff.js';
 import { sendFileToolSchema, handleSendFile } from './tools/send-file.js';
+import { sendMermaidToolSchema, handleSendMermaid } from './tools/send-mermaid.js';
+import { sendChartToolSchema, handleSendChart } from './tools/send-chart.js';
+import { sendCodeImageToolSchema, handleSendCodeImage } from './tools/send-code-image.js';
+import { sendScreenshotToolSchema, handleSendScreenshot } from './tools/send-screenshot.js';
+import { sendTableToolSchema, handleSendTable } from './tools/send-table.js';
+import { sendDepGraphToolSchema, handleSendDepGraph } from './tools/send-dep-graph.js';
 
 const ALL_TOOLS = [
   replyToolSchema,
@@ -30,6 +36,12 @@ const ALL_TOOLS = [
   updateTasksToolSchema,
   sendDiffToolSchema,
   sendFileToolSchema,
+  sendMermaidToolSchema,
+  sendChartToolSchema,
+  sendCodeImageToolSchema,
+  sendScreenshotToolSchema,
+  sendTableToolSchema,
+  sendDepGraphToolSchema,
 ];
 
 async function main() {
@@ -126,6 +138,48 @@ async function main() {
           result = await handleSendFile(
             bot,
             safeArgs as Parameters<typeof handleSendFile>[1]
+          );
+          break;
+
+        case 'send_mermaid':
+          result = await handleSendMermaid(
+            bot,
+            safeArgs as Parameters<typeof handleSendMermaid>[1]
+          );
+          break;
+
+        case 'send_chart':
+          result = await handleSendChart(
+            bot,
+            safeArgs as Parameters<typeof handleSendChart>[1]
+          );
+          break;
+
+        case 'send_code_image':
+          result = await handleSendCodeImage(
+            bot,
+            safeArgs as Parameters<typeof handleSendCodeImage>[1]
+          );
+          break;
+
+        case 'send_screenshot':
+          result = await handleSendScreenshot(
+            bot,
+            safeArgs as Parameters<typeof handleSendScreenshot>[1]
+          );
+          break;
+
+        case 'send_table':
+          result = await handleSendTable(
+            bot,
+            safeArgs as Parameters<typeof handleSendTable>[1]
+          );
+          break;
+
+        case 'send_dep_graph':
+          result = await handleSendDepGraph(
+            bot,
+            safeArgs as Parameters<typeof handleSendDepGraph>[1]
           );
           break;
 
